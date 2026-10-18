@@ -31,3 +31,13 @@ Für einen schnellen Funktionstest `index.html` in einem aktuellen Browser öffn
 3. Regelwerk um bezahlte/unbezahlte Pausen, Sondertage und individuelle Sollzeiten erweitern.
 4. Tests für Mitternachtswechsel, Monatswechsel, negative Salden und Datenexport ergänzen.
 5. Vor Mitarbeiterbetrieb Anforderungen an Datenschutz, Aufbewahrung und Nachvollziehbarkeit festlegen.
+
+## Version 0.3 – verbesserte Spracheingabe
+- Erkennt häufige deutsche Zeitangaben wie „von sieben bis halb fünf“, „halb vier“, „viertel nach sieben“ und „viertel vor fünf“.
+- Sucht zuerst gezielt nach einem „von … bis …“-Zeitraum, damit Pausenlängen nicht so leicht als Arbeitsbeginn oder Feierabend fehlinterpretiert werden.
+- Erkennt Datumsangaben wie „gestern“, „vorgestern“ und numerische Datumsformate.
+- Übernimmt Ort und Tätigkeit aus ausdrücklich benannten Feldern oder häufigen Tätigkeitsformulierungen.
+- Zeigt fehlende Angaben an; erkannte Werte müssen vor dem Speichern kontrolliert werden.
+- Aktualisierter Service-Worker-Cache, damit Geräte die neue Version abrufen.
+
+Hinweis: Die Erkennung ist eine lokale, regelbasierte Heuristik und keine KI-Transkription. Die Qualität der eigentlichen Sprache-zu-Text-Erkennung hängt von Safari/iOS ab. Pausen werden weiterhin nach den konfigurierten automatischen Regeln berechnet; gesprochene Pausenzeiten werden nicht als individuelle Pausen gespeichert.
