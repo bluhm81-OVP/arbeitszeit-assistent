@@ -1,3 +1,5 @@
+Arbeitszeit-Assistent v0.08 – Reparatur der Textübernahme: Zeiten, Ort und Tätigkeit werden gemeinsam ausgewertet.
+
 # Arbeitszeit-Assistent – Version 0.5
 
 ## Neu in v0.5

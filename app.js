@@ -15,48 +15,41 @@ function resetForm(date=todayISO()){editingId=null;$('date').value=date;$('start
 function saveEntry(){const e=readForm(),c=calc(e);if(!e.date||!c.valid){showToast('Bitte Datum, Beginn und Ende prüfen.');return}if(!e.location||!e.task){showToast('Bitte Ort und Tätigkeit ergänzen.');return}if(c.gross===0){showToast('Beginn und Ende ergeben keine Arbeitszeit.');return}const idx=state.entries.findIndex(x=>x.id===e.id);if(idx>=0)state.entries[idx]=e;else state.entries.push(e);persist();$('monthPicker').value=e.date.slice(0,7);render();fillForm(e);showToast('Arbeitstag gespeichert.')}
 function deleteEntry(){if(!editingId)return;state.entries=state.entries.filter(e=>e.id!==editingId);persist();resetForm();render();showToast('Eintrag gelöscht.')}
 function parseSpoken(){
- const input=$('transcript').value.trim();
- if(!input){showToast('Bitte erst etwas einsprechen oder eintippen.');return}
- const original=input, lower=input.toLocaleLowerCase('de-DE');
+ const raw=$('transcript').value.trim();
+ if(!raw){showToast('Bitte erst etwas einsprechen oder eintippen.');return}
+ const lower=raw.toLocaleLowerCase('de-DE');
  let date=todayISO();
- if(/\bgestern\b/i.test(lower)){const d=new Date();d.setDate(d.getDate()-1);date=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
- else {const dm=lower.match(/\b(?:am\s+)?(\d{1,2})[.\-/](\d{1,2})(?:[.\-/](\d{2,4}))?\b/);if(dm){const yy=dm[3]?(dm[3].length===2?'20'+dm[3]:dm[3]):String(new Date().getFullYear());date=`${yy}-${String(dm[2]).padStart(2,'0')}-${String(dm[1]).padStart(2,'0')}`}}
- // Start fresh: failed parsing must never leave old values looking like new results.
- $('start').value='';$('end').value='';$('location').value='';$('task').value='';
- let work=lower.normalize('NFC');
- const numberWords={'null':'00','eins':'01','ein':'01','eine':'01','einen':'01','zwei':'02','drei':'03','vier':'04','fünf':'05','sechs':'06','sieben':'07','acht':'08','neun':'09','zehn':'10','elf':'11','zwölf':'12'};
- // Convert common spoken German times before extracting clock values.
- work=work.replace(/\bhalb\s+(fünf|vier|drei|sechs|sieben|acht|neun|zehn)\b/g,(_,w)=>({fünf:'16:30',vier:'15:30',drei:'14:30',sechs:'17:30',sieben:'18:30',acht:'19:30',neun:'20:30',zehn:'21:30'}[w]));
- work=work.replace(/\b(von\s+)?(null|eins|ein|eine|einen|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s*(?:uhr)?\s+bis\b/g,(_,prefix,w)=>`${prefix||''}${numberWords[w]}:00 bis`);
- work=work.replace(/\b(null|eins|ein|eine|einen|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\s+uhr\b/g,(_,w)=>`${numberWords[w]}:00`);
- // Common end-of-day phrasing: "bis halb fünf" means 16:30 in this context.
- const matches=[...work.matchAll(/\b([01]?\d|2[0-3])\s*(?::|\.)([0-5]\d)\b|\b([01]?\d|2[0-3])\s*uhr\b/g)];
- const times=[];for(const m of matches){const h=Number(m[1]??m[3]),mi=Number(m[2]??0);const value=`${String(h).padStart(2,'0')}:${String(mi).padStart(2,'0')}`;if(!times.some(x=>x.index===m.index))times.push({index:m.index,end:m.index+m[0].length,time:value,raw:m[0]})}
- // If there are exactly two clear clock times, use them in the order spoken.
- if(times.length>=2){$('start').value=times[0].time;$('end').value=times[1].time}
- else {showToast('Uhrzeiten nicht sicher erkannt – bitte Beginn und Ende prüfen.')}
- $('date').value=date;
- // Remove the time range and filler words, then interpret comma-separated pieces.
- let remainder=work;
- for(const tm of times.slice(0,2)) remainder=remainder.replace(tm.raw,' ');
- remainder=remainder.replace(/\b(von|bis|ab|heute|gestern|arbeitszeit|gearbeitet|uhr)\b/g,' ').replace(/\b(?:am\s+)?\d{1,2}[.\-/]\d{1,2}(?:[.\-/]\d{2,4})?\b/g,' ').replace(/\s+/g,' ').trim();
- const parts=remainder.split(/[,;]+/).map(x=>x.trim().replace(/^[.\s-]+|[.\s-]+$/g,'')).filter(Boolean);
- const cleanPart=x=>x.replace(/^(?:in|bei|auf der baustelle in|baustelle)\s+/i,'').replace(/^(?:und|dann)\s+/i,'').trim();
- const hints=['pflaster verlegt','pflastern','pflasterarbeiten','rasen gemäht','rasen mähen','rasenmaehen','hecke geschnitten','heckenschnitt','baumschnitt','baum geschnitten','kabel verlegt','installation gemacht','reparatur','repariert','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt','baustelle aufgeraeumt','gemäht','geschnitten','verlegt','montiert','gepflastert','aufgeräumt','aufgeraeumt'];
- let task='',location='';
- if(parts.length>=2){location=cleanPart(parts[0]);task=parts.slice(1).map(cleanPart).join(', ')}
- else if(parts.length===1){const piece=cleanPart(parts[0]);const hit=hints.find(h=>piece.includes(h));if(hit){task=piece}else{
-   // A place introduced by a preposition is a location; otherwise retain unknown text as task.
-   const lm=piece.match(/^(?:in|bei|baustelle\s+in)\s+([\p{L}][\p{L}-]*(?:\s+[\p{L}][\p{L}-]*){0,2})$/iu);
-   if(lm)location=lm[1];else if(/\b(?:in|bei)\s+[\p{L}]/iu.test(piece)){const mm=piece.match(/\b(?:in|bei)\s+([\p{L}][\p{L}-]*(?:\s+[\p{L}][\p{L}-]*){0,2})/iu);if(mm){location=mm[1];task=piece.replace(mm[0],'').trim()}}
-   else task=piece;
- }}
- // Also support the familiar unpunctuated form "... in Wolgast Rasen gemäht".
- if(!location){const lm=remainder.match(/\b(?:in|bei|baustelle\s+in)\s+([\p{Lu}][\p{L}-]{2,}(?:\s+[\p{Lu}][\p{L}-]+){0,1})/u);if(lm){location=lm[1];if(!task)task=remainder.replace(lm[0],'').replace(/[,;]+/g,' ').trim()}}
- if(location)$('location').value=location.replace(/[.,;]+$/,'').trim();
- if(task)$('task').value=task.replace(/^[,;\s]+|[,;\s]+$/g,'').trim();
- $('transcript').value=original;updateCalc();
- if(times.length>=2)showToast('Text ausgewertet – bitte Beginn, Ende, Ort und Tätigkeit kontrollieren.');
+ if(/\bgestern\b/.test(lower)){const d=new Date();d.setDate(d.getDate()-1);date=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+ else {const dm=lower.match(/(?:am\s+)?(\d{1,2})[.\-/](\d{1,2})(?:[.\-/](\d{2,4}))?/);if(dm){const y=dm[3]?(dm[3].length===2?'20'+dm[3]:dm[3]):String(new Date().getFullYear());date=`${y}-${String(dm[2]).padStart(2,'0')}-${String(dm[1]).padStart(2,'0')}`}}
+ // Normalize common German spoken times before extracting numeric times.
+ const words={null:'',eins:'1',ein:'1',zwei:'2',drei:'3',vier:'4',fünf:'5',sechs:'6',sieben:'7',acht:'8',neun:'9',zehn:'10',elf:'11',zwölf:'12'};
+ let text=lower.replace(/[–—]/g,'-').replace(/\bhalb\s+fünf\b/g,'16:30').replace(/\bhalb\s+vier\b/g,'15:30').replace(/\bhalb\s+drei\b/g,'14:30').replace(/\bhalb\s+sechs\b/g,'17:30').replace(/\bhalb\s+acht\b/g,'07:30').replace(/\bhalb\s+sieben\b/g,'06:30');
+ text=text.replace(/\b(von\s+)?(sieben|sechs|acht|neun|zehn|elf|zwölf|fünf|vier|drei|zwei|eins|ein)\s+(?:uhr\s*)?(?:bis)\b/g,(m,from,n)=>`${from||''}${words[n]}:00 bis`);
+ text=text.replace(/\b(sieben|sechs|acht|neun|zehn|elf|zwölf|fünf|vier|drei|zwei|eins|ein)\s+uhr\b/g,(m,n)=>`${words[n]}:00`);
+ const numeric=[...text.matchAll(/\b([01]?\d|2[0-3])(?:[:.]([0-5]\d))?\s*(?:uhr)?\b/g)].map(m=>({index:m.index,time:`${String(m[1]).padStart(2,'0')}:${m[2]||'00'}`,end:m.index+m[0].length}));
+ // Prefer times explicitly connected by "von ... bis ..."; otherwise use the first two distinct time candidates.
+ let times=numeric;
+ const range=text.match(/(?:von\s*)?([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:uhr)?\s+bis\s+([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:uhr)?/);
+ if(range){times=[{time:`${String(range[1]).padStart(2,'0')}:${range[2]||'00'}`},{time:`${String(range[3]).padStart(2,'0')}:${range[4]||'00'}`}];}
+ else {const unique=[];for(const x of times){if(!unique.some(y=>y.time===x.time))unique.push(x)}times=unique}
+ if(times.length>=2){$('start').value=times[0].time;$('end').value=times[1].time}else{showToast('Beginn und Ende nicht sicher erkannt – bitte beide Uhrzeiten prüfen.');}
+ // Remove dates and time expressions, then identify a location from common prepositions or comma-separated speech.
+ let remainder=text.replace(/(?:am\s*)?\d{1,2}[.\-/]\d{1,2}(?:[.\-/]\d{2,4})?/g,' ')
+   .replace(/(?:von\s*)?(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?\s+bis\s+(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?/g,' ')
+   .replace(/\b(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?\b/g,' ')
+   .replace(/\b(?:von|bis|um|heute|gestern|arbeitszeit|gearbeitet|gearbeitet\s+in)\b/g,' ')
+   .replace(/\s+/g,' ').trim();
+ // Task hints are matched first so they cannot accidentally become the place name.
+ const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','rasen gemäht','rasenmähen','hecke geschnitten','baumschnitt','bäume geschnitten','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
+ const found=taskHints.find(x=>lower.includes(x));
+ if(found){$('task').value=found;remainder=remainder.replace(new RegExp(found.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),' ')}
+ // Locations may be introduced by "in/bei", or spoken as a comma-separated field: "Stolpe, Baumschnitt".
+ let loc='';
+ const prep=raw.match(/\b(?:in|bei|nach|auf der baustelle in|baustelle)\s+([A-ZÄÖÜ][\p{L}-]+(?:\s+[A-ZÄÖÜ][\p{L}-]+){0,2})/u);
+ if(prep)loc=prep[1].replace(/\s+(?:und|heute)$/i,'');
+ if(!loc){const parts=raw.split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);for(const part of parts){const clean=part.replace(/\b(?:von|bis|uhr|heute|gestern)\b/ig,' ').trim();if(/^[A-ZÄÖÜ][\p{L}-]+(?:\s+[A-ZÄÖÜ][\p{L}-]+){0,2}$/u.test(clean)&&!taskHints.some(h=>clean.toLowerCase().includes(h))&&!/^(Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag)$/i.test(clean)){loc=clean;break}}}
+ if(loc)$('location').value=loc;
+ $('date').value=date;$('transcript').value=raw;updateCalc();showToast('Text ausgewertet – bitte Beginn, Ende, Ort und Tätigkeit kontrollieren.');
 }
 function startVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('voiceStatus').textContent='Bitte iPhone-Tastatur-Diktat nutzen';$('voiceHint').textContent='Tippe ins Textfeld und dann auf das Mikrofon unten auf der iPhone-Tastatur. Die direkte Mikrofonfunktion wird von diesem Browser nicht unterstützt.';$('transcript').focus();showToast('Direkte Spracheingabe nicht verfügbar. Nutze das Mikrofon der iPhone-Tastatur.');return}if(recognition){try{recognition.stop()}catch(e){}return}recognition=new SR();recognition.lang='de-DE';recognition.interimResults=true;recognition.continuous=false;$('micBtn').classList.add('listening');$('micBtn').textContent='■ Aufnahme stoppen';$('voiceStatus').textContent='Direkte Spracheingabe läuft …';let result='';recognition.onresult=e=>{result=Array.from(e.results).map(r=>r[0].transcript).join(' ');$('transcript').value=result};recognition.onerror=e=>{const msg=e&&e.error==='not-allowed'?'Mikrofonzugriff verweigert. Bitte nutze das iPhone-Tastatur-Mikrofon.':'Mikrofon nicht verfügbar. Bitte nutze das iPhone-Tastatur-Mikrofon.';$('voiceStatus').textContent='Diktat über die Tastatur empfohlen';$('voiceHint').textContent=msg;showToast(msg)};recognition.onend=()=>{$('micBtn').classList.remove('listening');$('micBtn').textContent='🎙 Direkt sprechen';$('voiceStatus').textContent=result?'Diktat aufgenommen – Angaben übernehmen':'Feierabendbericht diktieren';recognition=null;if(result){$('transcript').value=result;$('transcript').focus()}};try{recognition.start()}catch(e){recognition=null;$('micBtn').classList.remove('listening');$('micBtn').textContent='🎙 Direkt sprechen';$('voiceStatus').textContent='Bitte iPhone-Tastatur-Diktat nutzen';showToast('Mikrofon konnte nicht gestartet werden. Nutze das Tastatur-Mikrofon.')}}
 function openSettings(){const s=state.settings;$('settingTarget').value=s.targetHours;$('settingThreshold1').value=s.threshold1;$('settingBreak1').value=s.break1;$('settingThreshold2').value=s.threshold2;$('settingBreak2').value=s.break2;$('settingsDialog').showModal()}
