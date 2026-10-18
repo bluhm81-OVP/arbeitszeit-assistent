@@ -21,35 +21,45 @@ function parseSpoken(){
  let date=todayISO();
  if(/\bgestern\b/.test(lower)){const d=new Date();d.setDate(d.getDate()-1);date=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
  else {const dm=lower.match(/(?:am\s+)?(\d{1,2})[.\-/](\d{1,2})(?:[.\-/](\d{2,4}))?/);if(dm){const y=dm[3]?(dm[3].length===2?'20'+dm[3]:dm[3]):String(new Date().getFullYear());date=`${y}-${String(dm[2]).padStart(2,'0')}-${String(dm[1]).padStart(2,'0')}`}}
- // Normalize common German spoken times before extracting numeric times.
- const words={null:'',eins:'1',ein:'1',zwei:'2',drei:'3',vier:'4',fünf:'5',sechs:'6',sieben:'7',acht:'8',neun:'9',zehn:'10',elf:'11',zwölf:'12'};
+ // Normalize spoken German time phrases to a stable numeric form.
  let text=lower.replace(/[–—]/g,'-').replace(/\bhalb\s+fünf\b/g,'16:30').replace(/\bhalb\s+vier\b/g,'15:30').replace(/\bhalb\s+drei\b/g,'14:30').replace(/\bhalb\s+sechs\b/g,'17:30').replace(/\bhalb\s+acht\b/g,'07:30').replace(/\bhalb\s+sieben\b/g,'06:30');
- text=text.replace(/\b(von\s+)?(sieben|sechs|acht|neun|zehn|elf|zwölf|fünf|vier|drei|zwei|eins|ein)\s+(?:uhr\s*)?(?:bis)\b/g,(m,from,n)=>`${from||''}${words[n]}:00 bis`);
- text=text.replace(/\b(sieben|sechs|acht|neun|zehn|elf|zwölf|fünf|vier|drei|zwei|eins|ein)\s+uhr\b/g,(m,n)=>`${words[n]}:00`);
- const numeric=[...text.matchAll(/\b([01]?\d|2[0-3])(?:[:.]([0-5]\d))?\s*(?:uhr)?\b/g)].map(m=>({index:m.index,time:`${String(m[1]).padStart(2,'0')}:${m[2]||'00'}`,end:m.index+m[0].length}));
- // Prefer times explicitly connected by "von ... bis ..."; otherwise use the first two distinct time candidates.
- let times=numeric;
+ const nums={eins:'1',ein:'1',eine:'1',einen:'1',zwei:'2',drei:'3',vier:'4',fünf:'5',sechs:'6',sieben:'7',acht:'8',neun:'9',zehn:'10',elf:'11',zwölf:'12'};
+ // Convert number words globally so ranges such as “sieben bis 18 Uhr” are parseable.
+ text=text.replace(/\b(eins|ein|eine|einen|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\b/g,(m,n)=>nums[n]);
+ text=text.replace(/\b(\d{1,2})\s+uhr\b/g,'$1:00');
+ const timeRe=/(?:^|\b)([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:uhr)?\b/g;
+ let times=[];let mt;while((mt=timeRe.exec(text))!==null){const t=`${String(Number(mt[1])).padStart(2,'0')}:${mt[2]||'00'}`;if(!times.some(x=>x===t))times.push(t)}
+ // Explicit range has priority; otherwise use the first two distinct times.
  const range=text.match(/(?:von\s*)?([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:uhr)?\s+bis\s+([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:uhr)?/);
- if(range){times=[{time:`${String(range[1]).padStart(2,'0')}:${range[2]||'00'}`},{time:`${String(range[3]).padStart(2,'0')}:${range[4]||'00'}`}];}
- else {const unique=[];for(const x of times){if(!unique.some(y=>y.time===x.time))unique.push(x)}times=unique}
- if(times.length>=2){$('start').value=times[0].time;$('end').value=times[1].time}else{showToast('Beginn und Ende nicht sicher erkannt – bitte beide Uhrzeiten prüfen.');}
- // Remove dates and time expressions, then identify a location from common prepositions or comma-separated speech.
- let remainder=text.replace(/(?:am\s*)?\d{1,2}[.\-/]\d{1,2}(?:[.\-/]\d{2,4})?/g,' ')
+ if(range){$('start').value=`${String(Number(range[1])).padStart(2,'0')}:${range[2]||'00'}`;$('end').value=`${String(Number(range[3])).padStart(2,'0')}:${range[4]||'00'}`}
+ else if(times.length>=2){$('start').value=times[0];$('end').value=times[1]}
+ else {showToast('Beginn und Ende nicht sicher erkannt. Bitte Uhrzeiten manuell prüfen.');}
+ const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','rasen gemäht','rasenmähen','rasen gemäht','hecke geschnitten','baumschnitt','bäume geschnitten','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
+ const found=taskHints.find(x=>lower.includes(x));
+ let task='';
+ if(found){task=found;$('task').value=found}
+ // Remove time/date and task phrases before locating a remaining place name.
+ let remainder=text.replace(/\bgestern\b|\bheute\b/g,' ')
+   .replace(/(?:am\s*)?\d{1,2}[.\-/]\d{1,2}(?:[.\-/]\d{2,4})?/g,' ')
    .replace(/(?:von\s*)?(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?\s+bis\s+(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?/g,' ')
    .replace(/\b(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?\b/g,' ')
-   .replace(/\b(?:von|bis|um|heute|gestern|arbeitszeit|gearbeitet|gearbeitet\s+in)\b/g,' ')
-   .replace(/\s+/g,' ').trim();
- // Task hints are matched first so they cannot accidentally become the place name.
- const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','rasen gemäht','rasenmähen','hecke geschnitten','baumschnitt','bäume geschnitten','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
- const found=taskHints.find(x=>lower.includes(x));
- if(found){$('task').value=found;remainder=remainder.replace(new RegExp(found.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),' ')}
- // Locations may be introduced by "in/bei", or spoken as a comma-separated field: "Stolpe, Baumschnitt".
+   .replace(/\b(?:von|bis|um|uhr|arbeitszeit|gearbeitet|in|bei|nach|auf der baustelle|baustelle)\b/g,' ');
+ for(const hint of taskHints) remainder=remainder.replace(new RegExp(hint.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'),' ');
+ remainder=remainder.replace(/[.,;:!?]/g,' , ').replace(/\s+/g,' ').trim();
  let loc='';
- const prep=raw.match(/\b(?:in|bei|nach|auf der baustelle in|baustelle)\s+([A-ZÄÖÜ][\p{L}-]+(?:\s+[A-ZÄÖÜ][\p{L}-]+){0,2})/u);
+ // Prefer explicit place after a location preposition in original input.
+ const prep=raw.match(/\b(?:in|bei|nach)\s+([A-ZÄÖÜ][\p{L}-]+(?:\s+[A-ZÄÖÜ][\p{L}-]+){0,2})/u);
  if(prep)loc=prep[1].replace(/\s+(?:und|heute)$/i,'');
- if(!loc){const parts=raw.split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);for(const part of parts){const clean=part.replace(/\b(?:von|bis|uhr|heute|gestern)\b/ig,' ').trim();if(/^[A-ZÄÖÜ][\p{L}-]+(?:\s+[A-ZÄÖÜ][\p{L}-]+){0,2}$/u.test(clean)&&!taskHints.some(h=>clean.toLowerCase().includes(h))&&!/^(Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag)$/i.test(clean)){loc=clean;break}}}
+ if(!loc){
+   const parts=raw.split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);
+   for(const part of parts){
+     let clean=part.toLocaleLowerCase('de-DE').replace(/\b(?:von|bis|uhr|heute|gestern|arbeitszeit|gearbeitet|in|bei|nach)\b/g,' ').replace(/\b\d{1,2}(?::\d{2})?\b/g,' ').replace(/[.!?]/g,' ').replace(/\s+/g,' ').trim();
+     for(const hint of taskHints)clean=clean.replace(new RegExp(hint.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'),' ').replace(/\s+/g,' ').trim();
+     if(/^[a-zäöüß-]+(?:\s+[a-zäöüß-]+){0,2}$/i.test(clean)&&clean&&!/^(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|heute|gestern|sieben|acht|neun|zehn)$/i.test(clean)){loc=clean.split(/\s+/).map(w=>w.charAt(0).toLocaleUpperCase('de-DE')+w.slice(1)).join(' ');break}
+   }
+ }
  if(loc)$('location').value=loc;
- $('date').value=date;$('transcript').value=raw;updateCalc();showToast('Text ausgewertet – bitte Beginn, Ende, Ort und Tätigkeit kontrollieren.');
+ $('date').value=date;$('transcript').value=raw;updateCalc();showToast('Text ausgewertet – bitte erkannte Angaben kontrollieren.');
 }
 function startVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('voiceStatus').textContent='Bitte iPhone-Tastatur-Diktat nutzen';$('voiceHint').textContent='Tippe ins Textfeld und dann auf das Mikrofon unten auf der iPhone-Tastatur. Die direkte Mikrofonfunktion wird von diesem Browser nicht unterstützt.';$('transcript').focus();showToast('Direkte Spracheingabe nicht verfügbar. Nutze das Mikrofon der iPhone-Tastatur.');return}if(recognition){try{recognition.stop()}catch(e){}return}recognition=new SR();recognition.lang='de-DE';recognition.interimResults=true;recognition.continuous=false;$('micBtn').classList.add('listening');$('micBtn').textContent='■ Aufnahme stoppen';$('voiceStatus').textContent='Direkte Spracheingabe läuft …';let result='';recognition.onresult=e=>{result=Array.from(e.results).map(r=>r[0].transcript).join(' ');$('transcript').value=result};recognition.onerror=e=>{const msg=e&&e.error==='not-allowed'?'Mikrofonzugriff verweigert. Bitte nutze das iPhone-Tastatur-Mikrofon.':'Mikrofon nicht verfügbar. Bitte nutze das iPhone-Tastatur-Mikrofon.';$('voiceStatus').textContent='Diktat über die Tastatur empfohlen';$('voiceHint').textContent=msg;showToast(msg)};recognition.onend=()=>{$('micBtn').classList.remove('listening');$('micBtn').textContent='🎙 Direkt sprechen';$('voiceStatus').textContent=result?'Diktat aufgenommen – Angaben übernehmen':'Feierabendbericht diktieren';recognition=null;if(result){$('transcript').value=result;$('transcript').focus()}};try{recognition.start()}catch(e){recognition=null;$('micBtn').classList.remove('listening');$('micBtn').textContent='🎙 Direkt sprechen';$('voiceStatus').textContent='Bitte iPhone-Tastatur-Diktat nutzen';showToast('Mikrofon konnte nicht gestartet werden. Nutze das Tastatur-Mikrofon.')}}
 function openSettings(){const s=state.settings;$('settingTarget').value=s.targetHours;$('settingThreshold1').value=s.threshold1;$('settingBreak1').value=s.break1;$('settingThreshold2').value=s.threshold2;$('settingBreak2').value=s.break2;$('settingsDialog').showModal()}
