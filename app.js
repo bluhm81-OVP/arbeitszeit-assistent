@@ -34,10 +34,11 @@ function parseSpoken(){
  if(range){$('start').value=`${String(Number(range[1])).padStart(2,'0')}:${range[2]||'00'}`;$('end').value=`${String(Number(range[3])).padStart(2,'0')}:${range[4]||'00'}`}
  else if(times.length>=2){$('start').value=times[0];$('end').value=times[1]}
  else {showToast('Beginn und Ende nicht sicher erkannt. Bitte Uhrzeiten manuell prüfen.');}
- const taskHints=['rasenpflege','rasen pflege','pflaster verlegt','pflasterarbeiten','pflastern','rasen gemäht','rasenmähen','rasen gemäht','hecke geschnitten','baumschnitt','bäume geschnitten','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
- const found=taskHints.find(x=>lower.includes(x));
+ const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','rasenpflege','rasen pflege','rasen gemäht','rasenmähen','hecke geschnitten','heckenpflege','hecken pflege','baumpflege','baum pflege','baumschnitt','bäume geschnitten','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
+ // Match longer and explicit task names first; preserve the user's original wording.
+ const found=taskHints.slice().sort((a,b)=>b.length-a.length).find(x=>new RegExp('\\b'+x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(lower));
  let task='';
- if(found){task=found;$('task').value=found}
+ if(found){task=found;$('task').value=found.charAt(0).toLocaleUpperCase('de-DE')+found.slice(1)}
  // Remove time/date and task phrases before locating a remaining place name.
  let remainder=text.replace(/\bgestern\b|\bheute\b/g,' ')
    .replace(/(?:am\s*)?\d{1,2}[.\-/]\d{1,2}(?:[.\-/]\d{2,4})?/g,' ')
