@@ -25,5 +25,4 @@ Version 0.10.02: Der Kalender merkt sich den ausgewählten Tag. „Neuer Tag“ 
 Die Tagesliste wird chronologisch vom ältesten zum neuesten Datum sortiert. Nachträglich angelegte Einträge erscheinen automatisch an der passenden Datumsposition. Gespeicherte Einträge und Berechnungen bleiben unverändert.
 
 
-## Version 0.10.07 – Tätigkeitsbegriffe
-Ergänzte Begriffe für die Sprachauswertung: Gartenpflege, Baumpflege, Gehölzschnitt, Rasenmähen und Pflege. Die bisherigen Begriffe einschließlich Pflastern bleiben erhalten.
+Version 0.10.08: Tätigkeits-Wortliste um Gartenpflege, Baumpflege, Gehölzschnitt, Rasenmähen und Pflege erweitert. Bestehende Pflastern-Erkennung beibehalten.
