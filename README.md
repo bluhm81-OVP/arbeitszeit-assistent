@@ -11,6 +11,3 @@ Alle Arbeitszeitdaten werden lokal im Browser auf diesem Gerät gespeichert. Sie
 
 ## Installation / Update über GitHub Pages
 Die Dateien `index.html`, `app.js`, `styles.css`, `manifest.json`, `sw.js` und `README.md` in das Repository hochladen und vorhandene Dateien ersetzen. Danach die Web-App schließen und erneut öffnen. Falls eine alte Version angezeigt wird, die Seite in Safari neu laden und die installierte Web-App erneut starten.
-
-
-Version 0.6: Orts-Erkennung ergänzt, damit ein Ortsname direkt nach den Uhrzeiten erkannt werden kann, z. B. „Sieben bis 16:00 Uhr Stolpe, Rasen gemäht“. Bitte erkannte Felder vor dem Speichern kontrollieren.
