@@ -16,3 +16,6 @@ Die Dateien `index.html`, `app.js`, `styles.css`, `manifest.json`, `sw.js` und `
 
 
 Version 0.10: Pausenabzug kann pro Arbeitstag überschrieben werden. Feld leer lassen für automatische Regel; Minutenwert eintragen (z. B. 30) für manuelle Pause.
+
+
+Version 0.10.02: Der Kalender merkt sich den ausgewählten Tag. „Neuer Tag“ verwendet diesen ausgewählten Tag; beim Speichern wird das Datum direkt aus dem Datumsfeld übernommen.
