@@ -21,50 +21,55 @@ function parseSpoken(){
  let date=todayISO();
  if(/\bgestern\b/.test(lower)){const d=new Date();d.setDate(d.getDate()-1);date=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
  else {const dm=lower.match(/(?:am\s+)?(\d{1,2})[.\-/](\d{1,2})(?:[.\-/](\d{2,4}))?/);if(dm){const y=dm[3]?(dm[3].length===2?'20'+dm[3]:dm[3]):String(new Date().getFullYear());date=`${y}-${String(dm[2]).padStart(2,'0')}-${String(dm[1]).padStart(2,'0')}`}}
+ // Normalize spoken German time phrases to a stable numeric form.
  let text=lower.replace(/[–—]/g,'-').replace(/\bhalb\s+fünf\b/g,'16:30').replace(/\bhalb\s+vier\b/g,'15:30').replace(/\bhalb\s+drei\b/g,'14:30').replace(/\bhalb\s+sechs\b/g,'17:30').replace(/\bhalb\s+acht\b/g,'07:30').replace(/\bhalb\s+sieben\b/g,'06:30');
  const nums={eins:'1',ein:'1',eine:'1',einen:'1',zwei:'2',drei:'3',vier:'4',fünf:'5',sechs:'6',sieben:'7',acht:'8',neun:'9',zehn:'10',elf:'11',zwölf:'12'};
+ // Convert number words globally so ranges such as “sieben bis 18 Uhr” are parseable.
  text=text.replace(/\b(eins|ein|eine|einen|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|elf|zwölf)\b/g,(m,n)=>nums[n]);
  text=text.replace(/\b(\d{1,2})\s+uhr\b/g,'$1:00');
  const timeRe=/(?:^|\b)([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:uhr)?\b/g;
- let times=[],mt;while((mt=timeRe.exec(text))!==null){const t=`${String(Number(mt[1])).padStart(2,'0')}:${mt[2]||'00'}`;if(!times.includes(t))times.push(t)}
+ let times=[];let mt;while((mt=timeRe.exec(text))!==null){const t=`${String(Number(mt[1])).padStart(2,'0')}:${mt[2]||'00'}`;if(!times.some(x=>x===t))times.push(t)}
+ // Explicit range has priority; otherwise use the first two distinct times.
  const range=text.match(/(?:von\s*)?([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:uhr)?\s+bis\s+([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:uhr)?/);
  if(range){$('start').value=`${String(Number(range[1])).padStart(2,'0')}:${range[2]||'00'}`;$('end').value=`${String(Number(range[3])).padStart(2,'0')}:${range[4]||'00'}`}
  else if(times.length>=2){$('start').value=times[0];$('end').value=times[1]}
- else {showToast('Beginn und Ende nicht sicher erkannt. Bitte Uhrzeiten manuell prüfen.')}
- const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','rasenpflege','rasen pflege','rasen gemäht','rasenmähen','rasen mähen','hecke geschnitten','heckenpflege','hecken pflege','gehölzschnitt','gehoelzschnitt','baumpflege','baum pflege','baumschnitt','bäume geschnitten','gartenpflege','garten pflege','pflege','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
- // If the input has comma-separated parts, the last part is the free-form task.
- // This deliberately supports new task names without requiring a hint-list match.
- const taskSegments=raw.split(/[,;\n]+/).map(s=>s.trim()).filter(Boolean);
+ else {showToast('Beginn und Ende nicht sicher erkannt. Bitte Uhrzeiten manuell prüfen.');}
+ const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','rasenpflege','rasen pflege','rasen gemäht','rasenmähen','hecke geschnitten','heckenpflege','hecken pflege','baumpflege','baum pflege','baumschnitt','bäume geschnitten','gartenpflege','garten pflege','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
+ // Tätigkeit ist immer der freie Text nach dem letzten Komma.
+ // So funktionieren auch bisher unbekannte Begriffe wie Gartenpflege oder Baumpflege.
+ const taskSegments=raw.split(',').map(part=>part.trim()).filter(Boolean);
  let taskCandidate='';
  if(taskSegments.length>=3) taskCandidate=taskSegments[taskSegments.length-1];
  else {
-   let cleaned=text.replace(/\bgestern\b|\bheute\b/ig,' ')
-     .replace(/(?:von\s*)?(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?\s+bis\s+(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?/g,' ')
-     .replace(/\b(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?\b/g,' ')
+   const cleaned=text.replace(/\bgestern\b|\bheute\b/ig,' ')
+     .replace(/(?:von\s*)?(?:sieben|sechs|acht|neun|zehn|elf|zwölf|vier|fünf|halb\s+(?:drei|vier|fünf|sechs|sieben|acht)|[01]?\d|2[0-3])(?:[:.]\d{2})?\s*(?:uhr)?\s+bis\s+(?:sieben|sechs|acht|neun|zehn|elf|zwölf|vier|fünf|[01]?\d|2[0-3])(?:[:.]\d{2})?\s*(?:uhr)?/ig,' ')
+     .replace(/\b(?:[01]?\d|2[0-3])[:.]\d{2}\s*(?:uhr)?/ig,' ')
+     .replace(/\b(?:von|bis|uhr|in|bei|auf der baustelle|baustelle|am)\b/ig,' ')
      .replace(/\b\d{1,2}[.\-/]\d{1,2}(?:[.\-/]\d{2,4})?\b/g,' ')
-     .replace(/\b(?:von|bis|uhr|in|bei|nach|am|um|arbeitszeit|gearbeitet|auf der baustelle|baustelle)\b/ig,' ')
      .replace(/\s+/g,' ').trim();
    const loc=$('location').value.trim();
    taskCandidate=loc?cleaned.replace(new RegExp(loc.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),' ').trim():cleaned;
  }
  taskCandidate=taskCandidate.replace(/^[\s,;:.!?-]+|[\s,;:.!?-]+$/g,'').trim();
  if(taskCandidate){$('task').value=taskCandidate.charAt(0).toLocaleUpperCase('de-DE')+taskCandidate.slice(1)}
- // Infer the location from the middle comma-separated part first.
+ // Remove time/date and task phrases before locating a remaining place name.
+ let remainder=text.replace(/\bgestern\b|\bheute\b/g,' ')
+   .replace(/(?:am\s*)?\d{1,2}[.\-/]\d{1,2}(?:[.\-/]\d{2,4})?/g,' ')
+   .replace(/(?:von\s*)?(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?\s+bis\s+(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?/g,' ')
+   .replace(/\b(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:uhr)?\b/g,' ')
+   .replace(/\b(?:von|bis|um|uhr|arbeitszeit|gearbeitet|in|bei|nach|auf der baustelle|baustelle)\b/g,' ');
+ for(const hint of taskHints) remainder=remainder.replace(new RegExp(hint.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'),' ');
+ remainder=remainder.replace(/[.,;:!?]/g,' , ').replace(/\s+/g,' ').trim();
  let loc='';
- if(taskSegments.length>=3){
-   const candidate=taskSegments[taskSegments.length-2].replace(/\b(?:in|bei|nach)\b/ig,' ').replace(/\s+/g,' ').trim();
-   if(candidate&&!/^(heute|gestern)$/i.test(candidate))loc=candidate.split(/\s+/).map(w=>w.charAt(0).toLocaleUpperCase('de-DE')+w.slice(1)).join(' ');
- }
- if(!loc){
-   const prep=raw.match(/\b(?:in|bei|nach)\s+([A-ZÄÖÜ][\p{L}-]+(?:\s+[A-ZÄÖÜ][\p{L}-]+){0,2})/u);
-   if(prep)loc=prep[1].replace(/\s+(?:und|heute)$/i,'');
- }
+ // Prefer explicit place after a location preposition in original input.
+ const prep=raw.match(/\b(?:in|bei|nach)\s+([A-ZÄÖÜ][\p{L}-]+(?:\s+[A-ZÄÖÜ][\p{L}-]+){0,2})/u);
+ if(prep)loc=prep[1].replace(/\s+(?:und|heute)$/i,'');
  if(!loc){
    const parts=raw.split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);
    for(const part of parts){
      let clean=part.toLocaleLowerCase('de-DE').replace(/\b(?:von|bis|uhr|heute|gestern|arbeitszeit|gearbeitet|in|bei|nach)\b/g,' ').replace(/\b\d{1,2}(?::\d{2})?\b/g,' ').replace(/[.!?]/g,' ').replace(/\s+/g,' ').trim();
      for(const hint of taskHints)clean=clean.replace(new RegExp(hint.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'),' ').replace(/\s+/g,' ').trim();
-     if(/^[a-zäöüß-]+(?:\s+[a-zäöüß-]+){0,2}$/i.test(clean)&&clean&&!/^(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|heute|gestern|sieben|acht|neun|zehn|\d+)$/i.test(clean)){loc=clean.split(/\s+/).map(w=>w.charAt(0).toLocaleUpperCase('de-DE')+w.slice(1)).join(' ');break}
+     if(/^[a-zäöüß-]+(?:\s+[a-zäöüß-]+){0,2}$/i.test(clean)&&clean&&!/^(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|heute|gestern|sieben|acht|neun|zehn)$/i.test(clean)){loc=clean.split(/\s+/).map(w=>w.charAt(0).toLocaleUpperCase('de-DE')+w.slice(1)).join(' ');break}
    }
  }
  if(loc)$('location').value=loc;
