@@ -9,3 +9,11 @@
 .pause-edit-label{display:block;margin-top:10px;font-size:12px;font-weight:650;color:var(--muted);line-height:1.4}
 .pause-edit-label input{display:block;width:100%;min-height:42px;margin-top:6px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:16px}
 .pause-value{align-self:center}
+
+
+/* v0.10.01: robust, visible pause override control on iOS Safari and installed PWAs */
+.pause-box { display:flex !important; flex-wrap:wrap !important; align-items:flex-start !important; }
+.pause-info { display:block !important; flex:1 1 100% !important; width:100% !important; min-width:0 !important; }
+.pause-edit-label { display:block !important; width:100% !important; visibility:visible !important; opacity:1 !important; }
+#pauseOverride { -webkit-appearance:none !important; appearance:none !important; display:block !important; visibility:visible !important; opacity:1 !important; position:relative !important; z-index:2 !important; pointer-events:auto !important; box-sizing:border-box !important; width:100% !important; min-width:0 !important; min-height:48px !important; margin-top:8px !important; padding:12px !important; border:1px solid #d7e2da !important; border-radius:12px !important; background:#fff !important; color:#17251d !important; font-size:16px !important; line-height:1.3 !important; }
+.pause-value { flex:0 0 auto !important; }
