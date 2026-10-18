@@ -21,5 +21,8 @@ Version 0.10: Pausenabzug kann pro Arbeitstag überschrieben werden. Feld leer l
 Version 0.10.02: Der Kalender merkt sich den ausgewählten Tag. „Neuer Tag“ verwendet diesen ausgewählten Tag; beim Speichern wird das Datum direkt aus dem Datumsfeld übernommen.
 
 
-## Version 0.10.03 – Datumssortierung
+## Version 0.10.04 – Tätigkeitsfix
 Die Tagesliste wird chronologisch vom ältesten zum neuesten Datum sortiert. Nachträglich angelegte Einträge erscheinen automatisch an der passenden Datumsposition. Gespeicherte Einträge und Berechnungen bleiben unverändert.
+
+
+Version 0.10.04: Erkennung von „Rasenpflege“ als Tätigkeit ergänzt.
