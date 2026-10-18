@@ -34,7 +34,7 @@ function parseSpoken(){
  if(range){$('start').value=`${String(Number(range[1])).padStart(2,'0')}:${range[2]||'00'}`;$('end').value=`${String(Number(range[3])).padStart(2,'0')}:${range[4]||'00'}`}
  else if(times.length>=2){$('start').value=times[0];$('end').value=times[1]}
  else {showToast('Beginn und Ende nicht sicher erkannt. Bitte Uhrzeiten manuell prüfen.');}
- const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','rasenpflege','rasen pflege','rasen gemäht','rasenmähen','hecke geschnitten','heckenpflege','hecken pflege','baumpflege','baum pflege','baumschnitt','bäume geschnitten','gartenpflege','garten pflege','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
+ const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','gartenpflege','garten pflege','baumpflege','baum pflege','gehölzschnitt','gehoelzschnitt','rasenmähen','rasenmaehen','rasen mähen','rasen maehen','pflege','rasenpflege','rasen pflege','rasen gemäht','hecke geschnitten','heckenpflege','hecken pflege','baumschnitt','bäume geschnitten','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
  // Tätigkeit ist immer der freie Text nach dem letzten Komma.
  // So funktionieren auch bisher unbekannte Begriffe wie Gartenpflege oder Baumpflege.
  const taskSegments=raw.split(',');
