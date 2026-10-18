@@ -1,1 +1,10 @@
-{"name":"Arbeitszeit Assistent","short_name":"Arbeitszeit","description":"Offlinefähige Arbeitszeiterfassung mit Spracheingabe, Stundenkonto und Monatsbericht.","lang":"de-DE","start_url":"./index.html","scope":"./","display":"standalone","background_color":"#f5f7f5","theme_color":"#173f32","icons":[]}
+{
+  "name": "Arbeitszeit-Assistent",
+  "short_name": "Arbeitszeit",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f4",
+  "theme_color": "#173f32",
+  "lang": "de"
+}
