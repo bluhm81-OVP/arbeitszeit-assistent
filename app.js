@@ -34,11 +34,24 @@ function parseSpoken(){
  if(range){$('start').value=`${String(Number(range[1])).padStart(2,'0')}:${range[2]||'00'}`;$('end').value=`${String(Number(range[3])).padStart(2,'0')}:${range[4]||'00'}`}
  else if(times.length>=2){$('start').value=times[0];$('end').value=times[1]}
  else {showToast('Beginn und Ende nicht sicher erkannt. Bitte Uhrzeiten manuell prüfen.');}
- const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','rasenpflege','rasen pflege','rasen gemäht','rasenmähen','hecke geschnitten','heckenpflege','hecken pflege','baumpflege','baum pflege','baumschnitt','bäume geschnitten','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
- // Match longer and explicit task names first; preserve the user's original wording.
- const found=taskHints.slice().sort((a,b)=>b.length-a.length).find(x=>new RegExp('\\b'+x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(lower));
- let task='';
- if(found){task=found;$('task').value=found.charAt(0).toLocaleUpperCase('de-DE')+found.slice(1)}
+ const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','rasenpflege','rasen pflege','rasen gemäht','rasenmähen','hecke geschnitten','heckenpflege','hecken pflege','baumpflege','baum pflege','baumschnitt','bäume geschnitten','gartenpflege','garten pflege','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
+ // Tätigkeiten nicht mehr auf eine feste Wortliste beschränken: bei der üblichen
+ // Form „Zeit, Ort, Tätigkeit“ den letzten Textabschnitt vollständig übernehmen.
+ const segments=t.split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);
+ let taskCandidate='';
+ if(segments.length>=3) taskCandidate=segments.slice(2).join(', ').trim();
+ else {
+   const cleaned=t.replace(/\bgestern\b|\bheute\b/ig,' ')
+     .replace(/(?:von\s*)?(?:sieben|sechs|acht|neun|zehn|elf|zwölf|vier|fünf|halb\s+(?:drei|vier|fünf|sechs|sieben|acht)|[01]?\d|2[0-3])(?:[:.]\d{2})?\s*(?:uhr)?\s+bis\s+(?:sieben|sechs|acht|neun|zehn|elf|zwölf|vier|fünf|[01]?\d|2[0-3])(?:[:.]\d{2})?\s*(?:uhr)?/ig,' ')
+     .replace(/\b(?:[01]?\d|2[0-3])[:.]\d{2}\s*(?:uhr)?/ig,' ')
+     .replace(/\b(?:von|bis|uhr|in|bei|auf der baustelle|baustelle|am)\b/ig,' ')
+     .replace(/\b\d{1,2}[.\-/]\d{1,2}(?:[.\-/]\d{2,4})?\b/g,' ')
+     .replace(/\s+/g,' ').trim();
+   const loc=$('location').value.trim();
+   taskCandidate=loc?cleaned.replace(new RegExp(loc.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'),' ').trim():cleaned;
+ }
+ taskCandidate=taskCandidate.replace(/^[\s,;:.!?-]+|[\s,;:.!?-]+$/g,'').trim();
+ if(taskCandidate){$('task').value=taskCandidate.charAt(0).toLocaleUpperCase('de-DE')+taskCandidate.slice(1)}
  // Remove time/date and task phrases before locating a remaining place name.
  let remainder=text.replace(/\bgestern\b|\bheute\b/g,' ')
    .replace(/(?:am\s*)?\d{1,2}[.\-/]\d{1,2}(?:[.\-/]\d{2,4})?/g,' ')
