@@ -1,4 +1,4 @@
-# Arbeitszeit-Assistent – Version 0.5
+# Arbeitszeit-Assistent – Version 0.6
 
 ## Neu in v0.5
 - iPhone-Tastatur-Diktat ist jetzt der empfohlene Standard: Textfeld antippen, Mikrofon auf der iOS-Tastatur drücken, Bericht sprechen und „Angaben aus Text übernehmen“ antippen.
