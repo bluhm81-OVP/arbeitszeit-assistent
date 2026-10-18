@@ -35,11 +35,11 @@ function parseSpoken(){
  else if(times.length>=2){$('start').value=times[0];$('end').value=times[1]}
  else {showToast('Beginn und Ende nicht sicher erkannt. Bitte Uhrzeiten manuell prüfen.');}
  const taskHints=['pflaster verlegt','pflasterarbeiten','pflastern','rasenpflege','rasen pflege','rasen gemäht','rasenmähen','hecke geschnitten','heckenpflege','hecken pflege','baumpflege','baum pflege','baumschnitt','bäume geschnitten','gartenpflege','garten pflege','kabel verlegt','installation gemacht','reparatur','montiert','baggerarbeiten','erdarbeiten','zaun gebaut','material geholt','baustelle aufgeräumt'];
- // Tätigkeiten nicht mehr auf eine feste Wortliste beschränken: bei der üblichen
- // Form „Zeit, Ort, Tätigkeit“ den letzten Textabschnitt vollständig übernehmen.
- const segments=t.split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean);
+ // Tätigkeit ist immer der freie Text nach dem letzten Komma.
+ // So funktionieren auch bisher unbekannte Begriffe wie Gartenpflege oder Baumpflege.
+ const taskSegments=raw.split(',');
  let taskCandidate='';
- if(segments.length>=3) taskCandidate=segments.slice(2).join(', ').trim();
+ if(taskSegments.length>=3) taskCandidate=taskSegments[taskSegments.length-1].trim();
  else {
    const cleaned=t.replace(/\bgestern\b|\bheute\b/ig,' ')
      .replace(/(?:von\s*)?(?:sieben|sechs|acht|neun|zehn|elf|zwölf|vier|fünf|halb\s+(?:drei|vier|fünf|sechs|sieben|acht)|[01]?\d|2[0-3])(?:[:.]\d{2})?\s*(?:uhr)?\s+bis\s+(?:sieben|sechs|acht|neun|zehn|elf|zwölf|vier|fünf|[01]?\d|2[0-3])(?:[:.]\d{2})?\s*(?:uhr)?/ig,' ')
